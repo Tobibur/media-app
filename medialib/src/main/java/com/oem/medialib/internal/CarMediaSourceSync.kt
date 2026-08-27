@@ -1,4 +1,4 @@
-package com.oem.mediacenter.session
+package com.oem.medialib.internal
 
 import android.content.ComponentName
 import android.content.Context
@@ -6,9 +6,9 @@ import android.util.Log
 
 /**
  * Syncs the selected media source with AAOS CarMediaManager when the Car API is present.
- * Uses reflection so the app still builds/runs when android.car is unavailable at runtime.
+ * Uses reflection so the library still builds/runs when android.car is unavailable at runtime.
  */
-class CarMediaSourceSync(private val context: Context) {
+internal class CarMediaSourceSync(private val context: Context) {
     fun setMediaSource(componentName: ComponentName) {
         try {
             val carClass = Class.forName("android.car.Car")

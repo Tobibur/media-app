@@ -6,11 +6,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
-import com.oem.mediacenter.data.BrowseNode
-import com.oem.mediacenter.data.ConnectionState
-import com.oem.mediacenter.data.MediaCenterRepository
-import com.oem.mediacenter.data.MediaSource
-import com.oem.mediacenter.data.NowPlayingState
+import com.oem.medialib.BrowseNode
+import com.oem.medialib.ConnectionState
+import com.oem.medialib.MediaHub
+import com.oem.medialib.MediaSource
+import com.oem.medialib.NowPlayingState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -34,7 +34,7 @@ data class BrowseUiState(
 )
 
 class MediaCenterViewModel(
-    private val repository: MediaCenterRepository,
+    private val hub: MediaHub,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -44,10 +44,10 @@ class MediaCenterViewModel(
     private val _browseState = MutableStateFlow(BrowseUiState())
     val browseState: StateFlow<BrowseUiState> = _browseState.asStateFlow()
 
-    val connectionState: StateFlow<ConnectionState> = repository.connectionState
+    val connectionState: StateFlow<ConnectionState> = hub.session.state
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ConnectionState.Idle)
 
-    val nowPlaying: StateFlow<NowPlayingState> = repository.nowPlaying
+    val nowPlaying: StateFlow<NowPlayingState> = hub.playback.nowPlaying
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NowPlayingState.Empty)
 
     private var cachedSources: List<MediaSource> = emptyList()
@@ -57,7 +57,6 @@ class MediaCenterViewModel(
         val lastPackage = savedStateHandle.get<String>(KEY_LAST_PACKAGE)
         if (!lastPackage.isNullOrBlank()) {
             viewModelScope.launch {
-                // Wait for first discovery then reconnect
                 refreshSourcesBlocking()
                 cachedSources.firstOrNull { it.packageName == lastPackage }?.let { connect(it) }
             }
@@ -71,7 +70,7 @@ class MediaCenterViewModel(
     private fun refreshSourcesBlocking() {
         _sourcesState.value = _sourcesState.value.copy(isLoading = true, error = null)
         try {
-            cachedSources = repository.discoverSources()
+            cachedSources = hub.sources.list()
             _sourcesState.value = SourcesUiState(sources = cachedSources, isLoading = false)
         } catch (e: Exception) {
             _sourcesState.value = SourcesUiState(
@@ -84,14 +83,14 @@ class MediaCenterViewModel(
 
     fun connect(source: MediaSource) {
         savedStateHandle[KEY_LAST_PACKAGE] = source.packageName
-        repository.connect(source)
+        hub.session.connect(source)
         openRoot()
     }
 
     fun openRoot() {
         viewModelScope.launch {
             _browseState.value = BrowseUiState(isLoading = true)
-            val rootResult = repository.loadLibraryRoot()
+            val rootResult = hub.library.root()
             rootResult.fold(
                 onSuccess = { root ->
                     loadChildrenInternal(
@@ -141,13 +140,13 @@ class MediaCenterViewModel(
     }
 
     fun play(node: BrowseNode) {
-        repository.playItem(node)
+        hub.playback.play(node)
     }
 
-    fun togglePlayPause() = repository.togglePlayPause()
-    fun skipNext() = repository.skipNext()
-    fun skipPrevious() = repository.skipPrevious()
-    fun seekTo(positionMs: Long) = repository.seekTo(positionMs)
+    fun togglePlayPause() = hub.playback.togglePlayPause()
+    fun skipNext() = hub.playback.skipNext()
+    fun skipPrevious() = hub.playback.skipPrevious()
+    fun seekTo(positionMs: Long) = hub.playback.seekTo(positionMs)
 
     private suspend fun loadChildrenInternal(
         parentId: String,
@@ -162,7 +161,7 @@ class MediaCenterViewModel(
             pathIds = pathIds,
             pathTitles = pathTitles,
         )
-        repository.loadChildren(parentId).fold(
+        hub.library.children(parentId).fold(
             onSuccess = { nodes ->
                 _browseState.value = BrowseUiState(
                     title = title,
@@ -187,12 +186,12 @@ class MediaCenterViewModel(
     companion object {
         private const val KEY_LAST_PACKAGE = "last_package"
 
-        fun factory(repository: MediaCenterRepository): ViewModelProvider.Factory =
+        fun factory(hub: MediaHub): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
                     return MediaCenterViewModel(
-                        repository = repository,
+                        hub = hub,
                         savedStateHandle = extras.createSavedStateHandle(),
                     ) as T
                 }

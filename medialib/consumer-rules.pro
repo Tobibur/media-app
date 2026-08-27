@@ -1,0 +1,11 @@
+# Keep public MediaHub types if a consumer enables R8.
+-keep class com.oem.medialib.MediaHub { *; }
+-keep class com.oem.medialib.SourceCatalog { *; }
+-keep class com.oem.medialib.SessionController { *; }
+-keep class com.oem.medialib.LibraryBrowser { *; }
+-keep class com.oem.medialib.PlaybackController { *; }
+-keep class com.oem.medialib.MediaSource { *; }
+-keep class com.oem.medialib.BrowseNode { *; }
+-keep class com.oem.medialib.NowPlayingState { *; }
+-keep class com.oem.medialib.ConnectionState { *; }
+-keep class com.oem.medialib.ConnectionState$* { *; }

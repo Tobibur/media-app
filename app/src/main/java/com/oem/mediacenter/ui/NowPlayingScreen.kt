@@ -33,7 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.oem.mediacenter.R
-import com.oem.mediacenter.data.NowPlayingState
+import com.oem.medialib.NowPlayingState
 import com.oem.mediacenter.ui.theme.TouchMin
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -85,9 +85,10 @@ fun NowPlayingScreen(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 24.dp),
         )
-        if (!state.subtitle.isNullOrBlank()) {
+        val subtitle = state.subtitle
+        if (!subtitle.isNullOrBlank()) {
             Text(
-                text = state.subtitle,
+                text = subtitle,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,

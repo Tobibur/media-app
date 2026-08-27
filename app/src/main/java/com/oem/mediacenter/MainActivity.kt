@@ -21,7 +21,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.oem.mediacenter.data.ConnectionState
+import com.oem.medialib.ConnectionState
 import com.oem.mediacenter.ui.BrowseScreen
 import com.oem.mediacenter.ui.MediaCenterViewModel
 import com.oem.mediacenter.ui.MiniPlayer
@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
             MediaCenterTheme {
                 MediaCenterAppRoot(
                     viewModel = viewModel(
-                        factory = MediaCenterViewModel.factory(app.container.repository),
+                        factory = MediaCenterViewModel.factory(app.container.mediaHub),
                     ),
                 )
             }

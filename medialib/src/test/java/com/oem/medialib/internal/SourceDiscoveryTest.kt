@@ -1,4 +1,4 @@
-package com.oem.mediacenter.discovery
+package com.oem.medialib.internal
 
 import androidx.media3.session.SessionToken
 import org.junit.Assert.assertFalse

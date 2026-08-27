@@ -13,7 +13,7 @@ class MediaCenterApp : Application() {
     }
 
     override fun onTerminate() {
-        container.sessionManager.release()
+        container.mediaHub.release()
         super.onTerminate()
     }
 }

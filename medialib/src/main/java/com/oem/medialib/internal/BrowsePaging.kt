@@ -1,11 +1,11 @@
-package com.oem.mediacenter.session
+package com.oem.medialib.internal
 
 import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
-import com.oem.mediacenter.data.BrowseNode
+import com.oem.medialib.BrowseNode
 
-object BrowsePaging {
+internal object BrowsePaging {
     const val PAGE_SIZE: Int = 50
 
     fun toBrowseNode(item: MediaItem): BrowseNode {

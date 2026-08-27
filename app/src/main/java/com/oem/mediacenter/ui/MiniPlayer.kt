@@ -23,7 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.oem.mediacenter.R
-import com.oem.mediacenter.data.NowPlayingState
+import com.oem.medialib.NowPlayingState
 import com.oem.mediacenter.ui.theme.TouchMin
 
 @Composable
@@ -35,7 +35,8 @@ fun MiniPlayer(
     onSkipNext: () -> Unit,
     rootModifier: Modifier = Modifier,
 ) {
-    if (!visible || state.title.isNullOrBlank()) return
+    val title = state.title
+    if (!visible || title.isNullOrBlank()) return
 
     Row(
         rootModifier
@@ -48,14 +49,15 @@ fun MiniPlayer(
     ) {
         Column(Modifier.weight(1f)) {
             Text(
-                text = state.title,
+                text = title,
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (!state.subtitle.isNullOrBlank()) {
+            val subtitle = state.subtitle
+            if (!subtitle.isNullOrBlank()) {
                 Text(
-                    text = state.subtitle,
+                    text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

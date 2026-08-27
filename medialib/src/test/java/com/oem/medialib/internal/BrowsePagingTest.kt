@@ -1,4 +1,4 @@
-package com.oem.mediacenter.session
+package com.oem.medialib.internal
 
 import androidx.media3.common.MediaMetadata
 import org.junit.Assert.assertEquals
