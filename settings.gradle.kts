@@ -16,4 +16,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "MediaCenter"
 include(":app")
+include(":medialib")
 include(":samplemedia")

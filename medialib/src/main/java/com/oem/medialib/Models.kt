@@ -1,14 +1,30 @@
-package com.oem.mediacenter.data
+package com.oem.medialib
 
 import android.net.Uri
 import androidx.media3.session.SessionToken
 
-data class MediaSource(
+/**
+ * A discovered media app that can be connected as a source.
+ *
+ * Constructed only by the library. [token] stays internal so consumers never
+ * touch Media3 types.
+ */
+class MediaSource internal constructor(
     val packageName: String,
     val serviceName: String,
     val label: CharSequence,
-    val token: SessionToken,
-)
+    internal val token: SessionToken,
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is MediaSource) return false
+        return packageName == other.packageName && serviceName == other.serviceName
+    }
+
+    override fun hashCode(): Int = 31 * packageName.hashCode() + serviceName.hashCode()
+
+    override fun toString(): String = "MediaSource($packageName/$serviceName)"
+}
 
 data class BrowseNode(
     val mediaId: String,

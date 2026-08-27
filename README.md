@@ -5,9 +5,9 @@ Privileged Automotive OS media hub: discovers installed `MediaLibraryService` so
 This app does **not** play audio itself. It is a remote control with a file browser. The source app (Spotify, radio, or the bundled sample) owns ExoPlayer, URIs, DRM, and playlists.
 
 ```
-[Media Center UI] --MediaBrowser--> [MediaLibraryService] --ExoPlayer--> speaker
-         ▲                                    │
-         └──────── metadata / play state ─────┘
+[Any UI] -- MediaHub APIs --> [:medialib] --MediaBrowser--> [MediaLibraryService] --ExoPlayer--> speaker
+                                      ▲                              │
+                                      └──── metadata / play state ───┘
 ```
 
 The hub sends a **media id**. The source looks up the real URI and plays it.
@@ -15,6 +15,7 @@ The hub sends a **media id**. The source looks up the real URI and plays it.
 ## Contents
 
 - [Modules](#modules)
+- [Headless library](#headless-library)
 - [Build](#build)
 - [Emulator (normal install)](#emulator-normal-install)
 - [Privileged install](#privileged-install-oem--userdebug-emulator)
@@ -35,10 +36,45 @@ The hub sends a **media id**. The source looks up the real URI and plays it.
 
 | Module | Package | Role |
 |---|---|---|
-| `:app` | `com.oem.mediacenter` | Hub UI. Discovers sources, browses, sends play/pause/next/seek. **No ExoPlayer.** |
+| `:medialib` | `com.oem.medialib` | Headless SDK. Source list, session, library browse, play controller. **No UI, no ExoPlayer.** |
+| `:app` | `com.oem.mediacenter` | Compose UI that consumes `:medialib`. |
 | `:samplemedia` | `com.oem.samplemedia` | Fake media app. Owns `ExoPlayer`, exposes `MediaLibraryService`, serves two demo MP3 streams. |
 
-Install both on an emulator. The hub has nothing to control without at least one library service.
+Install `:app` and `:samplemedia` on an emulator. The hub has nothing to control without at least one library service.
+
+## Headless library
+
+`:medialib` is the product if you want another app (or a non-Compose shell) to drive media sources without taking this UI.
+
+```kotlin
+val hub = MediaHub.create(context)
+
+val sources = hub.sources.list()
+hub.session.connect(sources.first())
+
+val root = hub.library.root().getOrThrow()
+val children = hub.library.children(root.mediaId).getOrThrow()
+
+hub.playback.play(children.first { it.isPlayable })
+hub.playback.togglePlayPause()
+hub.playback.skipNext()
+hub.playback.seekTo(30_000L)
+
+hub.session.state        // StateFlow<ConnectionState>
+hub.playback.nowPlaying  // StateFlow<NowPlayingState>
+hub.release()
+```
+
+| API | Methods |
+|---|---|
+| `hub.sources` | `list()` |
+| `hub.session` | `connect(source)`, `disconnect()`, `state` |
+| `hub.library` | `root()`, `children(parentId)` |
+| `hub.playback` | `play(item)`, `play()`, `pause()`, `togglePlayPause()`, `skipNext()`, `skipPrevious()`, `seekTo()`, `nowPlaying` |
+
+Media3 `SessionToken` / `MediaBrowser` stay inside `internal` classes. A consumer never constructs them.
+
+The host app still declares `MEDIA_CONTENT_CONTROL` for car-wide control. Package-visibility `<queries>` merge from the library manifest. Full usage: [`medialib/README.md`](medialib/README.md).
 
 ## Build
 
@@ -81,7 +117,7 @@ Template whitelist: [`app/src/main/res/xml/privapp_permissions_mediacenter.xml`]
 ## Unit tests
 
 ```bash
-./gradlew :app:testDebugUnitTest
+./gradlew :medialib:testDebugUnitTest
 ```
 
 ## Smoke checklist
@@ -98,23 +134,22 @@ Template whitelist: [`app/src/main/res/xml/privapp_permissions_mediacenter.xml`]
 ## Architecture
 
 ```
-UI (Compose screens)
+UI (Compose screens in :app)
         │
         ▼
-MediaCenterViewModel     ← sources list, browse tree, now playing
+MediaCenterViewModel
         │
         ▼
-MediaCenterRepository    ← thin facade
-        │
-        ├── SourceDiscovery          → SessionToken.getAllServiceTokens()
-        └── ActiveSessionManager     → one MediaBrowser connection
+MediaHub (:medialib, no UI)
+        ├── sources   SourceCatalog          → SessionToken.getAllServiceTokens()
+        ├── session   SessionController      → connect / disconnect
+        ├── library   LibraryBrowser         → getLibraryRoot / getChildren
+        └── playback  PlaybackController     → setMediaItem / play / pause / seek
                     │
-                    ├── getLibraryRoot / getChildren     (browse)
-                    ├── setMediaItem / play / pause      (control)
-                    └── CarMediaSourceSync               (tell AAOS which source)
+                    └── ActiveSessionManager → one MediaBrowser + CarMediaSourceSync
 ```
 
-Wiring is a manual container in `AppContainer`, not Hilt. `MediaCenterApp` creates it; `MainActivity` passes `repository` into the ViewModel factory.
+Wiring is a manual container in `AppContainer`, not Hilt. `MediaCenterApp` creates `MediaHub`; `MainActivity` passes it into the ViewModel factory.
 
 Screens:
 
@@ -125,19 +160,26 @@ Screens:
 
 ## Dependencies
 
-### Media Center (`:app`)
+### Headless library (`:medialib`)
 
 | Dependency | Why |
 |---|---|
+| `media3-session` + `media3-common` 1.5.0 | `SessionToken`, `MediaBrowser`, `MediaItem`, `Player` commands |
+| `kotlinx-coroutines-core` (`api`) | Public `StateFlow` for connection + now playing |
+| `kotlinx-coroutines-guava` | Media3 returns Guava `ListenableFuture`; `.await()` makes them suspend |
+| `android.car.jar` (`compileOnly`) | Optional AAOS `CarMediaManager`. Reflection at runtime so the library still builds on a phone SDK |
+| JUnit + coroutines-test | Discovery filters and browse mapping |
+
+There is **no** Compose and **no** `media3-exoplayer` in `:medialib`. That is intentional.
+
+### Media Center UI (`:app`)
+
+| Dependency | Why |
+|---|---|
+| `:medialib` | Source list, session, browse, play controller |
 | Compose BOM + Material3 + icons | UI |
 | Navigation Compose | `sources` → `browse/{package}` → `nowplaying` |
 | Lifecycle ViewModel / runtime-compose | ViewModel + `collectAsStateWithLifecycle` |
-| `media3-session` + `media3-common` 1.5.0 | `SessionToken`, `MediaBrowser`, `MediaItem`, `Player` commands |
-| `kotlinx-coroutines-guava` | Media3 returns Guava `ListenableFuture`; `.await()` makes them suspend |
-| `android.car.jar` (`compileOnly`) | Optional AAOS `CarMediaManager`. Reflection at runtime so the app still builds on a phone SDK |
-| JUnit + coroutines-test | Discovery filters and browse mapping |
-
-There is **no** `media3-exoplayer` in `:app`. That is intentional.
 
 ### Sample source (`:samplemedia`)
 
@@ -201,9 +243,9 @@ Each token becomes a `MediaSource`:
 - `packageName` — e.g. `com.oem.samplemedia`
 - `serviceName` — e.g. `com.oem.samplemedia.SampleLibraryService`
 - `label` — from `PackageManager.getApplicationLabel()`
-- `token` — needed later to connect
+- `token` — kept `internal`; `SessionController.connect()` uses it, consumers never see it
 
-The ViewModel calls `discoverSources()` on launch and shows `SourcesScreen`. `tokenProvider` is injectable so unit tests do not need a real `PackageManager`.
+The ViewModel calls `hub.sources.list()` on launch and shows `SourcesScreen`. `tokenProvider` is injectable so unit tests do not need a real `PackageManager`.
 
 ## How connection works
 
@@ -356,12 +398,13 @@ Do it in this order. Each step is testable before the next.
 
 ## Key files
 
-The three files that are the whole engine:
+The files that are the whole engine:
 
 | File | Responsibility |
 |---|---|
-| `app/.../discovery/SourceDiscovery.kt` | Find sources |
-| `app/.../session/ActiveSessionManager.kt` | Connect, browse, play, pause, seek |
+| `medialib/.../MediaHub.kt` | Public entry: `sources`, `session`, `library`, `playback` |
+| `medialib/.../internal/SourceDiscovery.kt` | Find sources |
+| `medialib/.../internal/ActiveSessionManager.kt` | Connect, browse, play, pause, seek |
 | `samplemedia/.../SampleLibraryService.kt` | What a source must implement |
 
-Everything else is Compose around those three.
+`:app` is Compose around `MediaHub`. Another app can depend on `:medialib` and skip this UI.

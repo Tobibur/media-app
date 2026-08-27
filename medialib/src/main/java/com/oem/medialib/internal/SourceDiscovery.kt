@@ -1,15 +1,15 @@
-package com.oem.mediacenter.discovery
+package com.oem.medialib.internal
 
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.media3.session.SessionToken
-import com.oem.mediacenter.data.MediaSource
+import com.oem.medialib.MediaSource
 
 /**
  * Discovers Media3 library / session services installed on the device.
  * Filtering is pure so unit tests can inject token lists without PackageManager.
  */
-class SourceDiscovery(
+internal class SourceDiscovery(
     private val context: Context,
     private val tokenProvider: () -> Collection<SessionToken> = {
         SessionToken.getAllServiceTokens(context)

@@ -1,4 +1,4 @@
-package com.oem.mediacenter.session
+package com.oem.medialib.internal
 
 import android.content.ComponentName
 import android.content.Context
@@ -8,11 +8,11 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.session.MediaBrowser
 import androidx.media3.session.MediaLibraryService
-import com.oem.mediacenter.data.BrowseNode
-import com.oem.mediacenter.data.ConnectionState
-import com.oem.mediacenter.data.MediaSource
-import com.oem.mediacenter.data.NowPlayingState
 import com.google.common.util.concurrent.ListenableFuture
+import com.oem.medialib.BrowseNode
+import com.oem.medialib.ConnectionState
+import com.oem.medialib.MediaSource
+import com.oem.medialib.NowPlayingState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -30,7 +30,7 @@ import java.util.concurrent.ExecutionException
 /**
  * Owns the single active MediaBrowser connection to a media source.
  */
-class ActiveSessionManager(
+internal class ActiveSessionManager(
     private val context: Context,
     private val carMediaSync: CarMediaSourceSync = CarMediaSourceSync(context),
 ) {
@@ -38,7 +38,6 @@ class ActiveSessionManager(
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private val _browser = MutableStateFlow<MediaBrowser?>(null)
-    val browser: StateFlow<MediaBrowser?> = _browser.asStateFlow()
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Idle)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
@@ -133,6 +132,14 @@ class ActiveSessionManager(
         browser.setMediaItem(item)
         browser.prepare()
         browser.play()
+    }
+
+    fun play() {
+        _browser.value?.play()
+    }
+
+    fun pause() {
+        _browser.value?.pause()
     }
 
     fun togglePlayPause() {
@@ -233,7 +240,6 @@ class ActiveSessionManager(
             releaseInternal()
             _connectionState.value = ConnectionState.Idle
         }
-        // Ensure release runs even if scope is torn down quickly
         mainHandler.post {
             _browser.value?.release()
         }

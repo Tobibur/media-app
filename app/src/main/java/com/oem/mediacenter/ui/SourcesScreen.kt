@@ -28,7 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.oem.mediacenter.R
-import com.oem.mediacenter.data.MediaSource
+import com.oem.medialib.MediaSource
 import com.oem.mediacenter.ui.theme.TouchMin
 
 @Composable
