@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Media Center</string>
+    <string name="sources_title">Sources</string>
+    <string name="browse_title">Browse</string>
+    <string name="now_playing_title">Now Playing</string>
+    <string name="no_sources">No media sources found</string>
+    <string name="empty_library">This library is empty</string>
+    <string name="connecting">Connecting…</string>
+    <string name="connection_failed">Could not connect to media source</string>
+    <string name="disconnected">Media source disconnected</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="skip_next">Next</string>
+    <string name="skip_previous">Previous</string>
+    <string name="nothing_playing">Nothing playing</string>
+</resources>
